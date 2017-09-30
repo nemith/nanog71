@@ -1,0 +1,304 @@
+Let's Build a BGP Traffic Engineering Controller
+NANOG 71 Hackathon Tutorial
+30 Sep 2017
+Tags: nanog, bgp, sdn, controller, tutorial
+
+Brandon Bennett
+Network Robot Mechanic, Facebook
+bbennett@fb.com
+@brandonrbennett
+
+* What are we building
+
+We are going to build the framework for a BGP-based Traffic Engineering controller
+
+- Push routes over iBGP from our controller to a peer router
+- Read peer router neighbor state and routes from BGP Monitoring Protocol (BMP)
+- Scale this to many routers!
+
+* But why?
+
+.image butwhy.webp
+
+- Dynamically monitor BGP neighbors
+- Control our egress traffic dynamically based on packet loss, latency, cost, application, etc outside of standard static BGP policy
+
+
+* Diagram
+
+.image diagram.svg 
+
+* The tools
+
+- Go programming language - [[http://golang.org]]
+- GoBGP library/daemon - [[https://osrg.github.io/gobgp/]]
+- network.toCode() virtual labs -  [[http://labs.networktocode.com]]
+
+My Editor
+
+- Visual Studio Code [[https://code.visualstudio.com/]] with the Go plugin
+- Go vscode extension [[https://marketplace.visualstudio.com/items?itemName=lukehoban.Go]]
+
+.image gopher-front.png _ 150
+
+* Why Go?
+
+We are going to use the Go programming language to build this controller.
+
+
+- Compiled
+- Statically typed
+- Easy to program with good stdlib and third party support
+- Great and easy concurrency built into the runtime (perfect for networks and daemons!)
+- Fun
+
+Although you could write this in other languages too
+
+.image gopher-ninja.png _ 200
+
+* Learning Go
+
+* Installing Go
+
+*Windows:*
+
+- Download and run MSI installer: [[https://golang.org/dl/]]
+
+*OS*X:*
+
+- Download the offical package installer 
+- Install from homebrew
+    $ brew install golang
+
+*Linux:*
+
+- Download binaries from https//golang.org/dl and put them somewhere:(i.e $HOME/go1.9 or /opt/go)
+- Use your distro's package (apt, dnf, etc)
+
+See [[https://golang.org/doc/install]] for more help
+
+* Creating our GOPATH
+
+GOPATH is our workspace for coding in and downloading dependencies to.  In Go 1.9 the default is $HOME/go
+
+   export GOPATH=$HOME/go
+
+There can be up to three subfolders under this GOPATH
+
+   $GOPATH  
+     ├── src     # Where your code goes
+     ├── bin     # Where go will store some binaries
+     └── pkg     # Where go stores compiled code
+
+Code we write should go under `src` (dependencies will be dl here too!)
+
+
+* My first Go program.
+
+.play -edit intro.go
+
+: `package\ defines the package name.  `main` must be used for binary packages that are not librarires.
+: `import` will import libraries.  Here we are importing the standary library package named "fmt" which is used to format and print out to the screen.
+: `func` defines a new function.  main() is always the entry function for a program
+: We create a new variable here called `who` with the value of `NANOG 71`.  Note that this is a strongly typed language but we didn't need to define the type here manually.  Go is smart enough to infer the type from the value using the `:=` assignement operator.  So the type of `who` is `string`
+: Finally we call the Printf function from the `fmt` pakage which will do some string formatting and print out to Stdout
+: If we hit run here the program is compiled and then ran here in the browser.
+
+* Functions
+
+.play -edit funcs.go /START OMIT/,/END OMIT/
+
+: How to define a new function
+: Input parameters
+: Multiple return variables
+
+* Variables 
+
+.play -edit vars.go /START OMIT/,/END OMIT/
+
+* Global variables and constants
+
+.play -edit globals.go
+
+
+* Slices and Maps
+We can also store collections of data
+
+.play -edit collections.go /START OMIT/,/END OMIT/
+
+* Looping
+
+There is only one keyword for looping in Go and that is `for`
+
+.play -edit loops.go /START OMIT/,/END OMIT/
+
+* Creating Object
+
+We can create custom objects as well using a `struct`
+
+.play -edit struct.go
+
+: The `type` keyword creates a new type with a name of Router that is a struct. This is similar to Classes in other languages
+: The struct is defined with two types inside it.  You can see we need to define the types for both of these values. We can use the ':=' assignment operator again to create a new variable r with the type of Rotuer.  We can assign variable here
+
+* Methods
+
+We can also attach methods to a any type
+
+.play -edit methods.go /START OMIT/,/END OMIT/
+
+* Go goroutines
+
+Go has the ability to run any function in the "background".   This is analogous to the `&` in Unix shells like `bash`
+
+.code bash_ampersand
+
+In go we use the `go` keyword before the function
+
+.play -edit goroutine.go /START OMIT/,/END OMIT/
+
+* Channels
+Channels are used to send data between and synchronize goroutines*
+
+.play -edit channels.go /START OMIT/,/END OMIT/
+
+* Our environment
+
+* Diagram Refresher
+
+.image diagram.svg
+
+
+* network.ToCode()
+
+Two vMX lab
+
+- vmx1 = our edge router (edge01)
+- vmx2 = Both transit routers (transit01, transit02)
+
+.image vmx-2node1.png _ 800 
+
+* Developing on our laptop
+
+.image diagram-devel.svg
+
+* Tunneling our development traffic
+We need a way to connect from our laptop to edge01 for BGP as well as have edge01 connect to a BMP server running on our laptop. 
+
+SSH to the rescue
+
+- Local forwarding `-L`<local`port>:<remote`ip>:<remote`port>`
+- Remote forwarding `-R`<port`on`jump`host>:<local`ip>:<local`port>`
+
+    ssh -L 8179:10.0.0.31:179 -R :11019:localhost:11019 ntc@<jump host>
+
+
+SSHD config
+
+    $ sudo vim /etc/ssh/sshd_config
+    Add GatewayPorts yes
+
+.image openssh-logo.png
+
+* GoBGP 
+
+* GoBGP
+Go BGP is both a stand alone server (with RPC API!) written in Go.  You can interact with it via command line or via GRPC.
+
+- Webpage: [[https://osrg.github.io/gobgp/]]
+- Github: [[https://github.com/osrg/gobgp]]
+
+
+Installing
+
+    $ go get github.com/osrg/gobgp/gobgpd
+    $ go get github.com/osrg/gobgp/gobgp
+
+.image gobgp.png _ 150
+ 
+* Starting gobgpd
+
+gobgpd is a standalone BGP daemon that needs no additional coding to run.
+
+- Config files can be in TOML, YAML, or JSON
+
+*Starting*the*daemon*:*
+
+    $ gobgpd -f gobgpd.conf -p
+
+
+Check the status with the gobgp command command
+
+    $ gobgp neighbors
+    $ gobgp global rib
+
+
+* Traffic engineer from from the command line
+
+The `gobgp` can also allow use to originate routes from the BGP server to send out to the peer routers (edge routers) 
+
+Lets program in a host route to go bypass the shortest ASPATH 
+
+    $ gobgp global rib add -a ipv4 198.51.100.50.0/24 nexthop 192.0.2.2 
+
+* Modifying BGP from code
+
+We have three options to interact with GoBGP from Go.
+
+1. Run gobgpd standalone and interact with it via GRPC
+
+2. Gun the gobgpd server in our own code base
+
+3. Shell out to `gobgp`-j` and parse JSON 
+
+* BGP Monitoring Protocol
+
+Relay BGP information back to a BMP server (monitoring station)
+
+- [[https://tools.ietf.org/html/rfc7854][RFC7854]]
+- Neighbor changes (peer up, peer down)
+- Route updates
+- Route mirroring
+- Statistics 
+
+
+* Let's write a BMP server to collect stats
+
+* Hack ideas
+
+* Peer monitor
+Use BMP to gather stats on BGP peers and routes they advertise overtime
+
+- Setup BMP server and listen for all pre-policy events
+- Setup alarms when peers go down
+- Record stats on reachability, peer availability, withdrawals, into InfluxDB or other backend system.
+
+.image sherlock.jpg _ 400
+
+* BGP Optimal Path
+Use BGP to inject routes to engineer around traffic issues, latency or even constants
+
+- Find IP used by your application (netflow or application)
+- Issue pings from router for each IP
+- Program a route via BGP to the next-hop with the lowest latency and/or packet loss
+
+.image shortcut.jpg _ 500
+
+* Peer Egress Utilization Optimization
+Run peers FLAMMING HOT!
+
+- Monitor interface utilization (SNMP, netconf, stream telemetry) 
+- Gather netflow data
+- When a certain threshold is reached program routes for new IPs onto transit
+
+.image fire-router.jpg _ 500
+
+* Conditional Server VIPs from BGP
+- Run gobgp on a server
+- Peer with upstream switches
+- If a service is up advertise a bgp route
+- If a service goes down withdrawal the bgp route
+- bgp multipath == FREE LOAD BALANCING * 
+
+* ???
+What ideas do you have?

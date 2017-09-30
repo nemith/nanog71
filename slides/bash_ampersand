@@ -1,0 +1,2 @@
+$ ./some_command      # Run in foreground
+$ ./some_command &    # Run in background

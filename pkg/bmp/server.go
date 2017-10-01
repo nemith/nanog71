@@ -54,8 +54,8 @@ func (s *Server) ListenAndServe() error {
 	}
 }
 
-func ListenAndServe(addr string) error {
-	s := Server{Addr: addr}
+func ListenAndServe(addr string, handler Handler) error {
+	s := Server{Addr: addr, Handler: handler}
 	return s.ListenAndServe()
 }
 
